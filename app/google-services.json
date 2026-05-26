@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "869931082316",
+    "project_id": "digifin-18725",
+    "storage_bucket": "digifin-18725.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:869931082316:android:4ee9a7bbbb5437d344cae9",
+        "android_client_info": {
+          "package_name": "com.example.digifin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCT8B2Zrw4xCsoox9ZhNlIItZgSBptL-hY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
