@@ -13,6 +13,8 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -35,6 +37,7 @@ import com.example.digifin.data.model.User
 import com.example.digifin.data.model.Expense
 import com.example.digifin.ui.navigation.Screen
 import com.example.digifin.ui.theme.DigifinTheme
+import com.example.digifin.util.getCategoryIcon
 import com.example.digifin.viewmodel.AuthViewModel
 import com.example.digifin.viewmodel.ExpenseViewModel
 import java.text.NumberFormat
@@ -63,6 +66,9 @@ fun DashboardScreen(
         onHistoryClick = { navController.navigate(Screen.ExpenseHistory.route) },
         onExpenseClick = { expenseId ->
             navController.navigate(Screen.AddEditExpense.createRoute(expenseId))
+        },
+        onDeleteExpense = { expenseId ->
+            expenseViewModel.deleteExpense(expenseId)
         }
     )
 }
@@ -76,11 +82,12 @@ fun DashboardContent(
     onLogoutClick: () -> Unit,
     onAddExpenseClick: () -> Unit,
     onHistoryClick: () -> Unit,
-    onExpenseClick: (String) -> Unit
+    onExpenseClick: (String) -> Unit,
+    onDeleteExpense: (String) -> Unit
 ) {
-    val totalExpense = expenses.sumOf { it.amount }
-    val totalCredit = 5000.0 // Sample credit
-    val balance = totalCredit - totalExpense
+    val totalExpense = expenses.filter { it.type == "Expense" || it.type == "" }.sumOf { it.amount }
+    val totalIncome = expenses.filter { it.type == "Income" }.sumOf { it.amount }
+    val balance = totalIncome - totalExpense
     var showMenu by remember { mutableStateOf(false) }
 
     val currencyFormatter = remember(userData?.currency) {
@@ -116,7 +123,7 @@ fun DashboardContent(
                             Icon(
                                 imageVector = Icons.Default.Person,
                                 contentDescription = "Profile",
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = Color.Black,
                                 modifier = Modifier.size(28.dp)
                             )
                         }
@@ -136,8 +143,8 @@ fun DashboardContent(
                                 onClick = { showMenu = false; onLogoutClick() },
                                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, null) },
                                 colors = MenuDefaults.itemColors(
-                                    textColor = MaterialTheme.colorScheme.error,
-                                    leadingIconColor = MaterialTheme.colorScheme.error
+                                    textColor = MaterialTheme.colorScheme.primary,
+                                    leadingIconColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                         }
@@ -170,7 +177,7 @@ fun DashboardContent(
                 Spacer(modifier = Modifier.height(8.dp))
                 Column {
                     Text(
-                        text = "Hi ${userData?.firstName ?: "User"},",
+                        text = "Hi ${userData?.firstName?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } ?: "User"},",
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = (-0.5).sp
@@ -178,7 +185,7 @@ fun DashboardContent(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Welcome back to DigiFin",
+                        text = "Take care of your finance",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -198,7 +205,7 @@ fun DashboardContent(
                 ) {
                     SummaryItem(
                         title = "Income",
-                        amount = totalCredit,
+                        amount = totalIncome,
                         icon = Icons.AutoMirrored.Filled.TrendingUp,
                         color = Color(0xFF4CAF50),
                         currencyFormatter = currencyFormatter,
@@ -236,9 +243,12 @@ fun DashboardContent(
             }
 
             items(expenses.take(5)) { expense ->
-                TransactionListItem(expense, currencyFormatter) {
-                    onExpenseClick(expense.id)
-                }
+                TransactionListItem(
+                    expense = expense,
+                    currencyFormatter = currencyFormatter,
+                    onEdit = { onExpenseClick(expense.id) },
+                    onDelete = { onDeleteExpense(expense.id) }
+                )
             }
             
             item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -330,54 +340,79 @@ fun SummaryItem(
 }
 
 @Composable
-fun TransactionListItem(expense: Expense, currencyFormatter: NumberFormat, onClick: () -> Unit) {
+fun TransactionListItem(
+    expense: Expense,
+    currencyFormatter: NumberFormat,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .padding(16.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth()
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
-                    contentAlignment = Alignment.Center
-                ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Icon(
+                        imageVector = getCategoryIcon(expense.category),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = expense.category.take(1).uppercase(),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary
+                        text = expense.title.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 0.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = expense.title, 
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface
+                
+                val isIncome = expense.type == "Income"
+                Text(
+                    text = (if (isIncome) "+" else "-") + currencyFormatter.format(expense.amount),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
+                    color = if (isIncome) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+                )
+            }
+            
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onEdit, modifier = Modifier.size(30.dp)) {
+                    Icon(
+                        Icons.Default.Edit, 
+                        contentDescription = "Edit", 
+                        tint = Color.Black.copy(alpha = 0.8f),
+                        modifier = Modifier.size(16.dp)
                     )
-                    Text(
-                        text = expense.category, 
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+                IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
+                    Icon(
+                        Icons.Default.Delete, 
+                        contentDescription = "Delete", 
+                        tint = Color.Black.copy(alpha = 0.7f),
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
-            Text(
-                text = "- " + currencyFormatter.format(expense.amount),
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.ExtraBold),
-                color = MaterialTheme.colorScheme.error
-            )
         }
     }
 }
@@ -388,15 +423,16 @@ fun DashboardPreview() {
     DigifinTheme {
         DashboardContent(
             expenses = listOf(
-                Expense(id = "1", title = "Netflix Subscription", amount = 15.99, category = "Entertainment"),
-                Expense(id = "2", title = "Starbucks Coffee", amount = 5.50, category = "Food")
+                Expense(id = "1", title = "NETFLIX SUBSCRIPTION", amount = 15.99, category = "Entertainment"),
+                Expense(id = "2", title = "STARBUCKS COFFEE", amount = 5.50, category = "Food")
             ),
             userData = User(firstName = "Alex"),
             onProfileClick = {},
             onLogoutClick = {},
             onAddExpenseClick = {},
             onHistoryClick = {},
-            onExpenseClick = {}
+            onExpenseClick = {},
+            onDeleteExpense = {}
         )
     }
 }
