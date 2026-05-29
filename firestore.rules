@@ -2,14 +2,12 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // User Profile Rules
     match /users/{userId} {
-      // Allow users to create their own profile during registration
       allow create: if request.auth != null && request.auth.uid == userId;
-
-      // Allow users to read and update only their own profile
       allow read, update: if request.auth != null && request.auth.uid == userId;
 
-      // Expenses subcollection rules
+      // Expenses subcollection rules inside the user document
       match /expenses/{expenseId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
