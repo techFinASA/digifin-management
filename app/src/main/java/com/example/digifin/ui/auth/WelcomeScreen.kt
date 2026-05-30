@@ -1,5 +1,6 @@
 package com.example.digifin.ui.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,16 +11,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.digifin.R
 import com.example.digifin.ui.navigation.Screen
 
 @Composable
@@ -46,30 +49,14 @@ fun WelcomeScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo Icon
-            Icon(
-                imageVector = Icons.Default.AccountBalanceWallet,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-                    .padding(16.dp),
-                tint = MaterialTheme.colorScheme.primary
+
+            // Brand Name Image
+            Image(
+                painter = painterResource(id = R.drawable.digifin_logo),
+                contentDescription = "DigiFin",
+                modifier = Modifier.height(300.dp)
             )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Brand Name
-            Text(
-                text = "DigiFin",
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 2.sp
-                ),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
+            Spacer(modifier = Modifier.height(32.dp))
             Text(
                 text = "Smart Finance for Modern Living",
                 style = MaterialTheme.typography.bodyLarge,

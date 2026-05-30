@@ -1,15 +1,15 @@
 package com.example.digifin.ui.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.digifin.R
 import com.example.digifin.ui.navigation.Screen
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
@@ -17,7 +17,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun SplashScreen(navController: NavController) {
     LaunchedEffect(key1 = true) {
-        delay(2000)
+        delay(5000)
         val auth = FirebaseAuth.getInstance()
         if (auth.currentUser != null) {
             navController.navigate(Screen.Dashboard.route) {
@@ -34,11 +34,10 @@ fun SplashScreen(navController: NavController) {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "Digifin",
-            fontSize = 40.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+        Image(
+            painter = painterResource(id = R.drawable.digifin_name),
+            contentDescription = "Digifin",
+            modifier = Modifier.width(280.dp) // Adjust width as needed
         )
     }
 }
