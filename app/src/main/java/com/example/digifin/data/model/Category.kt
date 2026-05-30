@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 enum class Category(val title: String, val color: Color, val isIncome: Boolean = false) {
     // Expense Categories
-    FOOD("Food", Color(0xFFE57373)),
+    FOOD("Food", Color(0xFFCC0033)),
     TRANSPORT("Transport", Color(0xFF81C784)),
     SHOPPING("Shopping", Color(0xFF64B5F6)),
     BILLS("Bills", Color(0xFFFFB74D)),

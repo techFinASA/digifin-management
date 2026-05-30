@@ -1,13 +1,16 @@
 package com.example.digifin.ui.auth
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -15,6 +18,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.digifin.R
 import com.example.digifin.ui.navigation.Screen
 import com.example.digifin.ui.theme.DigifinTheme
 import com.example.digifin.viewmodel.AuthState
@@ -58,6 +62,7 @@ fun LoginContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
@@ -65,35 +70,30 @@ fun LoginContent(
         Spacer(modifier = Modifier.height(48.dp))
 
         // Brand and Logo Section
-        IconButton(
-            onClick = onLogoClick,
-            modifier = Modifier.size(80.dp)
+        Box(
+            modifier = Modifier
+                .size(250.dp)
+                .clip(RoundedCornerShape(32.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(0.dp)
+                .clickable { onLogoClick() },
+            contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.AccountBalanceWallet,
-                contentDescription = "Go Home",
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                tint = MaterialTheme.colorScheme.primary
+            Image(
+                painter = painterResource(id = R.drawable.digifin_logo),
+                contentDescription = "Logo",
+                modifier = Modifier.fillMaxSize()
             )
         }
-
-        Text(
-            text = "DigiFin",
-            style = MaterialTheme.typography.headlineLarge.copy(
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.primary
-            )
-        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
         // Title
         Text(
             text = "Sign in with your credentials",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight(500)
         )
 
         Spacer(modifier = Modifier.height(32.dp))

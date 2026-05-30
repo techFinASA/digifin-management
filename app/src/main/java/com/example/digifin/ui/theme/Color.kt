@@ -15,4 +15,4 @@ val SoftGold = Color(0xFFE5C76B)
 // Functional Colors
 val SlateGray = Color(0xFF8E8E93)
 val OffWhite = Color(0xFFF2F2F7)
-val ErrorRed = Color(0xFFFF453A)
+val ErrorRed = Color(0xFFCC0033)

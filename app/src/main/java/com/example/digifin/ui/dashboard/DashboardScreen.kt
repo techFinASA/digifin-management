@@ -184,11 +184,6 @@ fun DashboardContent(
                         ),
                         color = MaterialTheme.colorScheme.onBackground
                     )
-                    Text(
-                        text = "Take care of your finance",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
 
@@ -215,7 +210,7 @@ fun DashboardContent(
                         title = "Expenses",
                         amount = totalExpense,
                         icon = Icons.AutoMirrored.Filled.TrendingDown,
-                        color = Color(0xFFF44336),
+                        color = Color(0xFFCC0033),
                         currencyFormatter = currencyFormatter,
                         modifier = Modifier.weight(1f)
                     )
@@ -280,7 +275,7 @@ fun BalanceCard(balance: Double, currencyFormatter: NumberFormat) {
         ) {
             Column(modifier = Modifier.align(Alignment.TopStart)) {
                 Text(
-                    text = "Total Balance",
+                    text = "Monthly Outstanding",
                     style = MaterialTheme.typography.labelLarge,
                     color = Color.Black.copy(alpha = 0.7f)
                 )
@@ -292,7 +287,7 @@ fun BalanceCard(balance: Double, currencyFormatter: NumberFormat) {
             }
             
             Text(
-                text = "DigiFin Premium",
+                text = "DigiFin",
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                 color = Color.Black.copy(alpha = 0.6f),
                 modifier = Modifier.align(Alignment.BottomEnd)
@@ -372,7 +367,7 @@ fun TransactionListItem(
                     Text(
                         text = expense.title.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
                         style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight(500),
                             letterSpacing = 0.sp
                         ),
                         color = MaterialTheme.colorScheme.onSurface,
