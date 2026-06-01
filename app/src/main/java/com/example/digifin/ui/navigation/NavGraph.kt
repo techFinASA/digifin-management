@@ -11,6 +11,8 @@ import com.example.digifin.ui.dashboard.DashboardScreen
 import com.example.digifin.ui.expense.AddEditExpenseScreen
 import com.example.digifin.ui.expense.ExpenseHistoryScreen
 import com.example.digifin.ui.profile.ProfileScreen
+import com.example.digifin.ui.analysis.AnalysisScreen
+import com.example.digifin.ui.about.AboutScreen
 
 @Composable
 fun NavGraph(
@@ -48,6 +50,12 @@ fun NavGraph(
         }
         composable(Screen.Profile.route) {
             ProfileScreen(navController)
+        }
+        composable(Screen.Analysis.route) {
+            AnalysisScreen(navController)
+        }
+        composable(Screen.About.route) {
+            AboutScreen(navController)
         }
     }
 }
