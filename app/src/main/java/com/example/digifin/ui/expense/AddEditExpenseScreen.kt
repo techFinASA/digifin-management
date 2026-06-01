@@ -275,7 +275,7 @@ fun AddEditExpenseContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (type == "Expense") "Debit" else "Credit",
+                                text = type,
                                 style = MaterialTheme.typography.labelLarge.copy(
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 ),
