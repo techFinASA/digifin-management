@@ -60,6 +60,9 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel = view
         onRegister = { email, password, firstName, lastName, country, currency ->
             viewModel.register(email, password, firstName, lastName, country, currency)
         },
+        onCheckVerification = {
+            viewModel.checkVerificationStatus()
+        },
         onLoginClick = { navController.navigate(Screen.Login.route) }
     )
 }
@@ -69,6 +72,7 @@ fun RegisterScreen(navController: NavController, viewModel: AuthViewModel = view
 fun RegisterContent(
     authState: AuthState,
     onRegister: (String, String, String, String, String, String) -> Unit,
+    onCheckVerification: () -> Unit,
     onLoginClick: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
@@ -79,6 +83,7 @@ fun RegisterContent(
     var expanded by remember { mutableStateOf(false) }
 
     val scrollState = rememberScrollState()
+    val isVerificationSent = authState is AuthState.VerificationEmailSent
 
     Column(
         modifier = Modifier
@@ -109,127 +114,154 @@ fun RegisterContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Join Now",
-            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.ExtraBold),
+            text = if (isVerificationSent) "Check Your Email" else "Join Now",
+            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight(500)),
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
-            text = "and start managing your finances",
+            text = if (isVerificationSent) "We've sent a verification link to $email" else "and start managing your finances",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(40.dp))
 
-        ModernAuthTextField(
-            value = firstName,
-            onValueChange = { firstName = it },
-            label = "First Name",
-            icon = Icons.Default.Badge
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ModernAuthTextField(
-            value = lastName,
-            onValueChange = { lastName = it },
-            label = "Last Name",
-            icon = Icons.Default.Badge
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ModernAuthTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = "Email Address",
-            icon = Icons.Default.Email
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ModernAuthTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = "Password",
-            icon = Icons.Default.Lock,
-            isPassword = true
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Modern Country Dropdown
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded },
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        if (!isVerificationSent) {
             ModernAuthTextField(
-                value = selectedCountry.name,
-                onValueChange = {},
-                label = "Country",
-                icon = Icons.Default.Public,
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor()
+                value = firstName,
+                onValueChange = { firstName = it },
+                label = "First Name",
+                icon = Icons.Default.Badge
             )
-            
-            ExposedDropdownMenu(
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ModernAuthTextField(
+                value = lastName,
+                onValueChange = { lastName = it },
+                label = "Last Name",
+                icon = Icons.Default.Badge
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ModernAuthTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = "Email Address",
+                icon = Icons.Default.Email
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ModernAuthTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = "Password",
+                icon = Icons.Default.Lock,
+                isPassword = true
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ExposedDropdownMenuBox(
                 expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                onExpandedChange = { expanded = !expanded },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                countries.forEach { country ->
-                    DropdownMenuItem(
-                        text = { Text(country.name) },
-                        onClick = {
-                            selectedCountry = country
-                            expanded = false
-                        }
-                    )
+                ModernAuthTextField(
+                    value = selectedCountry.name,
+                    onValueChange = {},
+                    label = "Country",
+                    icon = Icons.Default.Public,
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier.menuAnchor()
+                )
+                
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                ) {
+                    countries.forEach { country ->
+                        DropdownMenuItem(
+                            text = { Text(country.name) },
+                            onClick = {
+                                selectedCountry = country
+                                expanded = false
+                            }
+                        )
+                    }
                 }
             }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        ModernAuthTextField(
-            value = selectedCountry.currency,
-            onValueChange = {},
-            label = "Currency",
-            icon = Icons.Default.Payments,
-            readOnly = true,
-            enabled = false
-        )
+            ModernAuthTextField(
+                value = selectedCountry.currency,
+                onValueChange = {},
+                label = "Currency",
+                icon = Icons.Default.Payments,
+                readOnly = true,
+                enabled = false
+            )
+        } else {
+            // Icon to indicate email sent
+            Icon(
+                imageVector = Icons.Default.MarkEmailRead,
+                contentDescription = null,
+                modifier = Modifier.size(100.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Please click the link in your email to verify your account, then come back here and click the button below.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
 
         Spacer(modifier = Modifier.height(40.dp))
 
         if (authState is AuthState.Loading) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         } else {
             Button(
                 onClick = {
-                    onRegister(
-                        email,
-                        password,
-                        firstName,
-                        lastName,
-                        selectedCountry.name,
-                        selectedCountry.currency
-                    )
+                    if (isVerificationSent) {
+                        onCheckVerification()
+                    } else {
+                        onRegister(
+                            email,
+                            password,
+                            firstName,
+                            lastName,
+                            selectedCountry.name,
+                            selectedCountry.currency
+                        )
+                    }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = Color.Black
-                )
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
             ) {
-                Text("Join Now", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                Text(
+                    text = if (isVerificationSent) "I've Verified My Email" else "Join Now",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
             }
         }
+        
         TextButton(onClick = onLoginClick) {
-            Text("Already have an account? Login")
+            Text(if (isVerificationSent) "Go back to Login" else "Already have an account? Login")
         }
+
         if (authState is AuthState.Error) {
             Text(
                 text = (authState as AuthState.Error).message,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 8.dp)
+                modifier = Modifier.padding(top = 8.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
     }
@@ -250,7 +282,7 @@ fun ModernAuthTextField(
     TextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
         leadingIcon = {
             Icon(
                 icon,
@@ -275,7 +307,7 @@ fun ModernAuthTextField(
             unfocusedIndicatorColor = Color.Transparent,
             disabledIndicatorColor = Color.Transparent,
             focusedLabelColor = MaterialTheme.colorScheme.primary,
-            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
         )
     )
 }
@@ -287,6 +319,7 @@ fun RegisterPreview() {
         RegisterContent(
             authState = AuthState.Idle,
             onRegister = { _, _, _, _, _, _ -> },
+            onCheckVerification = {},
             onLoginClick = {}
         )
     }
