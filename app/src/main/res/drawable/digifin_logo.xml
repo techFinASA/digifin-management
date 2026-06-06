@@ -1,0 +1,45 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="680dp"
+    android:height="340dp"
+    android:viewportWidth="680"
+    android:viewportHeight="340">
+
+    <!-- Background Square -->
+    <path
+        android:fillColor="#3d1f00"
+        android:pathData="M272,128h136v136h-136z" />
+
+    <!-- Outer Glow/Stroke -->
+    <path
+        android:strokeColor="#C9922A"
+        android:strokeWidth="1.8"
+        android:fillColor="#00000000"
+        android:pathData="M277,133h126v126h-126z"
+        android:alpha="0.5" />
+
+    <!-- Stylized D shape and curves -->
+    <path
+        android:fillColor="#C9922A"
+        android:pathData="M312,152v88c0,0 28,0 28,0c38,0 44,-34 44,-54c0,-34 -36,-34 -44,-34z" />
+
+    <path
+        android:fillColor="#3d1f00"
+        android:pathData="M326,166v60c0,0 18,0 18,0c22,0 24,-22 24,-30c0,-22 -18,-22 -24,-22z" />
+
+    <!-- Chart Bars -->
+    <path
+        android:fillColor="#EDD07A"
+        android:pathData="M334,200h6v18h-6z" />
+    <path
+        android:fillColor="#D4A017"
+        android:pathData="M344,192h6v26h-6z" />
+    <path
+        android:fillColor="#EDD07A"
+        android:pathData="M354,184h6v34h-6z"
+        android:alpha="0.9" />
+
+    <!-- Logo Text -->
+    <!-- Note: VectorDrawable does not support <text>. Using simple shapes to represent it or leaving it out if complex. -->
+    <!-- For simplicity, I will provide a valid VectorDrawable that doesn't crash the build. -->
+
+</vector>

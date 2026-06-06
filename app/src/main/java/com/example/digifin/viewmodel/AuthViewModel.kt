@@ -43,8 +43,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             _authState.value = AuthState.Loading
             val result = repository.login(email, pass)
             if (result.isSuccess) {
-                fetchUserData() // Fetch and "cookie" the name after success
-                _authState.value = AuthState.Success(result.getOrNull())
+                val user = result.getOrNull()
+                if (user?.isEmailVerified == true) {
+                    fetchUserData()
+                    _authState.value = AuthState.Success(user)
+                } else {
+                    _authState.value = AuthState.VerificationEmailSent
+                }
             } else {
                 _authState.value = AuthState.Error(result.exceptionOrNull()?.message ?: "Login failed")
             }
@@ -59,18 +64,43 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         country: String,
         currency: String
     ) {
-        Log.d("AuthViewModel", "Register clicked for $email")
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             val result = repository.register(email, pass, firstName, lastName, country, currency)
             if (result.isSuccess) {
-                Log.d("AuthViewModel", "Register success")
-                fetchUserData() // Also fetch after registration
-                _authState.value = AuthState.Success(result.getOrNull())
+                _authState.value = AuthState.VerificationEmailSent
             } else {
                 val errorMsg = result.exceptionOrNull()?.message ?: "Registration failed"
-                Log.e("AuthViewModel", "Register error: $errorMsg")
                 _authState.value = AuthState.Error(errorMsg)
+            }
+        }
+    }
+
+    fun checkVerificationStatus() {
+        viewModelScope.launch {
+            val isVerified = repository.reloadUser()
+            if (isVerified) {
+                fetchUserData()
+                _authState.value = AuthState.Success(repository.currentUser)
+            } else {
+                _authState.value = AuthState.Error("Email not verified yet. Please check your inbox.")
+                // Keep the state as VerificationEmailSent so the UI stays on verification view
+                // but we can briefly show an error
+                kotlinx.coroutines.delay(2000)
+                _authState.value = AuthState.VerificationEmailSent
+            }
+        }
+    }
+
+    fun updateProfile(firstName: String, lastName: String) {
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+            val result = repository.updateProfile(firstName, lastName)
+            if (result.isSuccess) {
+                fetchUserData()
+                _authState.value = AuthState.Idle
+            } else {
+                _authState.value = AuthState.Error(result.exceptionOrNull()?.message ?: "Update failed")
             }
         }
     }
@@ -87,7 +117,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             _authState.value = AuthState.Loading
             val result = repository.resetPassword(email)
             if (result.isSuccess) {
-                _authState.value = AuthState.Idle // Or a specific success state
+                _authState.value = AuthState.Idle
             } else {
                 _authState.value = AuthState.Error(result.exceptionOrNull()?.message ?: "Reset failed")
             }
@@ -98,6 +128,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
+    object VerificationEmailSent : AuthState()
     data class Success(val user: FirebaseUser?) : AuthState()
     data class Error(val message: String) : AuthState()
 }

@@ -8,6 +8,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +40,16 @@ fun AnalysisScreen(
     val expenses by expenseViewModel.expenses.collectAsState()
     val userData by authViewModel.userData.collectAsState()
 
+    // Month Filter State
+    val currentCalendar = Calendar.getInstance()
+    var selectedMonth by remember { mutableStateOf<Int>(currentCalendar.get(Calendar.MONTH)) }
+    var expanded by remember { mutableStateOf(false) }
+
+    val months = listOf(
+        "January", "February", "March", "April", "May", "June", 
+        "July", "August", "September", "October", "November", "December"
+    )
+
     val currencyFormatter = remember(userData?.currency) {
         val user = userData
         val locale = when (user?.currency) {
@@ -55,7 +67,14 @@ fun AnalysisScreen(
         }
     }
 
-    val expenseList = expenses.filter { it.type == "Expense" || it.type == "" }
+    val expenseList = expenses.filter { 
+        val isExpense = it.type == "Expense" || it.type == ""
+        val expenseCalendar = Calendar.getInstance().apply { timeInMillis = it.date }
+        val matchesMonth = expenseCalendar.get(Calendar.MONTH) == selectedMonth &&
+                          expenseCalendar.get(Calendar.YEAR) == currentCalendar.get(Calendar.YEAR)
+        isExpense && matchesMonth
+    }
+    
     val totalSpend = expenseList.sumOf { it.amount }
     
     val categorySpends = expenseList
@@ -80,108 +99,177 @@ fun AnalysisScreen(
             )
         }
     ) { padding ->
-        if (expenseList.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("No data to analyze", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        } else {
-            LazyColumn(
+        Column(modifier = Modifier.padding(padding)) {
+            // Month Selector & Year Display
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    // Large Pie Chart
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(240.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Canvas(modifier = Modifier.size(200.dp)) {
-                            var startAngle = -90f
-                            categorySpends.forEach { (catTitle, amount) ->
-                                val sweepAngle = (amount / totalSpend * 360f).toFloat()
-                                val category = Category.entries.find { it.title == catTitle } ?: Category.OTHERS
-                                drawArc(
-                                    color = category.color,
-                                    startAngle = startAngle,
-                                    sweepAngle = sweepAngle,
-                                    useCenter = false,
-                                    style = Stroke(width = 30.dp.toPx())
-                                )
-                                startAngle += sweepAngle
-                            }
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "Total Spending",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = currencyFormatter.format(totalSpend).substringBefore("."),
-                                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-
-                item {
-                    Text(
-                        text = "Category Breakdown",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                items(categorySpends) { (catTitle, amount) ->
-                    val category = Category.entries.find { it.title == catTitle } ?: Category.OTHERS
-                    val percentage = (amount / totalSpend * 100).toInt()
-                    
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                Box(modifier = Modifier.weight(1f)) {
+                    Surface(
+                        onClick = { expanded = true },
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                     ) {
                         Row(
-                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(12.dp)
-                                        .clip(CircleShape)
-                                        .background(category.color)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = catTitle,
-                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "$percentage% of total",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
                             Text(
-                                text = currencyFormatter.format(amount),
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.ExtraBold),
+                                text = months[selectedMonth],
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Icon(
+                                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.fillMaxWidth(0.6f).background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        months.forEachIndexed { index, month ->
+                            DropdownMenuItem(
+                                text = { Text(month) },
+                                onClick = {
+                                    selectedMonth = index
+                                    expanded = false
+                                },
+                                colors = MenuDefaults.itemColors(
+                                    textColor = if (selectedMonth == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
                             )
                         }
                     }
                 }
                 
-                item { Spacer(modifier = Modifier.height(40.dp)) }
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Text(
+                    text = currentCalendar.get(Calendar.YEAR).toString(),
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+                )
+            }
+
+            if (expenseList.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No spending data for this month", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Large Pie Chart
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(240.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Canvas(modifier = Modifier.size(220.dp)) {
+                                var startAngle = -90f
+                                categorySpends.forEach { (catTitle, amount) ->
+                                    val sweepAngle = (amount / totalSpend * 360f).toFloat()
+                                    val category = Category.entries.find { it.title == catTitle } ?: Category.OTHERS
+                                    drawArc(
+                                        color = category.color,
+                                        startAngle = startAngle,
+                                        sweepAngle = sweepAngle,
+                                        useCenter = false,
+                                        style = Stroke(width = 36.dp.toPx())
+                                    )
+                                    startAngle += sweepAngle
+                                }
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "TOTAL SPENT",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                                Text(
+                                    text = currencyFormatter.format(totalSpend).substringBefore("."),
+                                    style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Black),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        Text(
+                            text = "Category Breakdown",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    items(categorySpends) { (catTitle, amount) ->
+                        val category = Category.entries.find { it.title == catTitle } ?: Category.OTHERS
+                        val percentage = (amount / totalSpend * 100).toInt()
+                        
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(
+                                        modifier = Modifier.size(12.dp),
+                                        shape = CircleShape,
+                                        color = category.color
+                                    ) {}
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column {
+                                        Text(
+                                            text = catTitle,
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "$percentage% of total spending",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = currencyFormatter.format(amount),
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                    
+                    item { Spacer(modifier = Modifier.height(40.dp)) }
+                }
             }
         }
     }

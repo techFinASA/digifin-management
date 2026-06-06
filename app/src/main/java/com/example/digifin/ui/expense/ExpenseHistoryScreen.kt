@@ -1,5 +1,6 @@
 package com.example.digifin.ui.expense
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,6 +9,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.digifin.data.model.Expense
@@ -81,6 +85,16 @@ fun ExpenseHistoryContent(
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") } // "All", "Debit", "Credit"
     
+    // Month Filter State
+    val currentCalendar = Calendar.getInstance()
+    var selectedMonth by remember { mutableStateOf<Int>(currentCalendar.get(Calendar.MONTH)) }
+    var expanded by remember { mutableStateOf(false) }
+
+    val months = listOf(
+        "January", "February", "March", "April", "May", "June", 
+        "July", "August", "September", "October", "November", "December"
+    )
+
     val filteredExpenses = expenses.filter {
         val matchesSearch = it.title.contains(searchQuery, ignoreCase = true) || 
                            it.category.contains(searchQuery, ignoreCase = true)
@@ -89,7 +103,12 @@ fun ExpenseHistoryContent(
             "Credit" -> it.type == "Income"
             else -> true
         }
-        matchesSearch && matchesFilter
+        
+        val expenseCalendar = Calendar.getInstance().apply { timeInMillis = it.date }
+        val matchesMonth = expenseCalendar.get(Calendar.MONTH) == selectedMonth &&
+                          expenseCalendar.get(Calendar.YEAR) == currentCalendar.get(Calendar.YEAR)
+
+        matchesSearch && matchesFilter && matchesMonth
     }
 
     Scaffold(
@@ -122,7 +141,7 @@ fun ExpenseHistoryContent(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .clip(RoundedCornerShape(12.dp)),
-                placeholder = { Text("Search by title or category") },
+                placeholder = { Text("Search transactions...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 colors = TextFieldDefaults.colors(
                     focusedIndicatorColor = Color.Transparent,
@@ -131,6 +150,71 @@ fun ExpenseHistoryContent(
                     unfocusedContainerColor = MaterialTheme.colorScheme.surface
                 )
             )
+
+            // Month Selector & Year Display
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    Surface(
+                        onClick = { expanded = true },
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = months[selectedMonth],
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Icon(
+                                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.fillMaxWidth(0.6f).background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        months.forEachIndexed { index, month ->
+                            DropdownMenuItem(
+                                text = { Text(month) },
+                                onClick = {
+                                    selectedMonth = index
+                                    expanded = false
+                                },
+                                colors = MenuDefaults.itemColors(
+                                    textColor = if (selectedMonth == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Text(
+                    text = currentCalendar.get(Calendar.YEAR).toString(),
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+                )
+            }
 
             // Type Filter (Debit/Credit)
             Row(
@@ -173,13 +257,24 @@ fun ExpenseHistoryContent(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(filteredExpenses) { expense ->
-                    TransactionListItem(
-                        expense = expense,
-                        currencyFormatter = currencyFormatter,
-                        onEdit = { onExpenseClick(expense.id) },
-                        onDelete = { onDeleteExpense(expense.id) }
-                    )
+                if (filteredExpenses.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(top = 60.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No transactions for this month", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                } else {
+                    items(filteredExpenses) { expense ->
+                        TransactionListItem(
+                            expense = expense,
+                            currencyFormatter = currencyFormatter,
+                            onEdit = { onExpenseClick(expense.id) },
+                            onDelete = { onDeleteExpense(expense.id) }
+                        )
+                    }
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
             }

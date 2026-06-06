@@ -9,20 +9,23 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.digifin.ui.navigation.Screen
+import com.example.digifin.viewmodel.AuthState
 import com.example.digifin.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,6 +35,18 @@ fun ProfileScreen(
     authViewModel: AuthViewModel = viewModel()
 ) {
     val userData by authViewModel.userData.collectAsState()
+    val authState by authViewModel.authState.collectAsState()
+
+    var isEditing by remember { mutableStateOf(false) }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+
+    LaunchedEffect(userData) {
+        userData?.let {
+            firstName = it.firstName
+            lastName = it.lastName
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -40,6 +55,20 @@ fun ProfileScreen(
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (isEditing) {
+                        IconButton(onClick = {
+                            authViewModel.updateProfile(firstName, lastName)
+                            isEditing = false
+                        }) {
+                            Icon(Icons.Default.Save, contentDescription = "Save", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    } else {
+                        IconButton(onClick = { isEditing = true }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -75,31 +104,52 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = "${userData?.firstName ?: ""} ${userData?.lastName ?: ""}",
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            
-            Text(
-                text = userData?.email ?: "No email available",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (isEditing) {
+                OutlinedTextField(
+                    value = firstName,
+                    onValueChange = { firstName = it },
+                    label = { Text("First Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = lastName,
+                    onValueChange = { lastName = it },
+                    label = { Text("Last Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            } else {
+                Text(
+                    text = "${userData?.firstName?.replaceFirstChar { it.titlecase() } ?: ""} ${userData?.lastName?.replaceFirstChar { it.titlecase() } ?: ""}",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
             // User Details Section
+            if (!isEditing) {
+                ProfileDetailItem(
+                    label = "First Name",
+                    value = userData?.firstName ?: "N/A",
+                    icon = Icons.Default.Badge
+                )
+                ProfileDetailItem(
+                    label = "Last Name",
+                    value = userData?.lastName ?: "N/A",
+                    icon = Icons.Default.Badge
+                )
+            }
+            
             ProfileDetailItem(
-                label = "First Name",
-                value = userData?.firstName ?: "N/A",
-                icon = Icons.Default.Badge
+                label = "Email Address",
+                value = userData?.email ?: "N/A",
+                icon = Icons.Default.Email
             )
-            ProfileDetailItem(
-                label = "Last Name",
-                value = userData?.lastName ?: "N/A",
-                icon = Icons.Default.Badge
-            )
+            
             ProfileDetailItem(
                 label = "Country",
                 value = userData?.country ?: "N/A",
@@ -110,6 +160,19 @@ fun ProfileScreen(
                 value = userData?.currency ?: "N/A",
                 icon = Icons.Default.Payments
             )
+
+            if (authState is AuthState.Loading) {
+                Spacer(modifier = Modifier.height(16.dp))
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+
+            if (authState is AuthState.Error) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = (authState as AuthState.Error).message,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
 
             Spacer(modifier = Modifier.height(40.dp))
 
@@ -126,7 +189,7 @@ fun ProfileScreen(
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = androidx.compose.ui.graphics.Color.Black
+                    contentColor = Color.Black
                 )
             ) {
                 Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)

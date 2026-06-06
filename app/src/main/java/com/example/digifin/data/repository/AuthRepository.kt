@@ -69,10 +69,38 @@ class AuthRepository {
                 Log.d("AuthRepository", "Saving user to Firestore...")
                 firestore.collection("users").document(firebaseUser.uid).set(user).await()
                 Log.d("AuthRepository", "Firestore save success")
+                
+                // Send Firebase native verification email
+                firebaseUser.sendEmailVerification().await()
+                Log.d("AuthRepository", "Verification email sent")
             }
             Result.success(firebaseUser)
         } catch (e: Exception) {
             Log.e("AuthRepository", "Registration failed", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun reloadUser(): Boolean {
+        return try {
+            auth.currentUser?.reload()?.await()
+            auth.currentUser?.isEmailVerified ?: false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun updateProfile(firstName: String, lastName: String): Result<Unit> {
+        val uid = auth.currentUser?.uid ?: return Result.failure(Exception("User not logged in"))
+        return try {
+            firestore.collection("users").document(uid).update(
+                mapOf(
+                    "firstName" to firstName,
+                    "lastName" to lastName
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
             Result.failure(e)
         }
     }
