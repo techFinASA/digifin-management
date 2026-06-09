@@ -9,9 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,7 +23,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.digifin.data.model.Expense
-import com.example.digifin.data.model.User
 import com.example.digifin.ui.dashboard.TransactionListItem
 import com.example.digifin.ui.navigation.Screen
 import com.example.digifin.ui.theme.DigifinTheme
@@ -84,7 +81,14 @@ fun ExpenseHistoryContent(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") } // "All", "Debit", "Credit"
+    var sortDescending by remember { mutableStateOf(true) }
+    var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
+    var showDatePicker by remember { mutableStateOf(false) }
     
+    val expandedDates = remember { mutableStateMapOf<Long, Boolean>() }
+    
+    val dayFormatter = remember { java.text.SimpleDateFormat("EEEE, dd MMM yyyy", Locale.getDefault()) }
+
     // Month Filter State
     val currentCalendar = Calendar.getInstance()
     var selectedMonth by remember { mutableStateOf<Int>(currentCalendar.get(Calendar.MONTH)) }
@@ -104,11 +108,53 @@ fun ExpenseHistoryContent(
             else -> true
         }
         
-        val expenseCalendar = Calendar.getInstance().apply { timeInMillis = it.date }
-        val matchesMonth = expenseCalendar.get(Calendar.MONTH) == selectedMonth &&
-                          expenseCalendar.get(Calendar.YEAR) == currentCalendar.get(Calendar.YEAR)
+        val matchesMonth = if (selectedDateMillis == null) {
+            val expenseCalendar = Calendar.getInstance().apply { timeInMillis = it.date }
+            expenseCalendar.get(Calendar.MONTH) == selectedMonth &&
+            expenseCalendar.get(Calendar.YEAR) == currentCalendar.get(Calendar.YEAR)
+        } else true
 
-        matchesSearch && matchesFilter && matchesMonth
+        val matchesDate = selectedDateMillis?.let { sel ->
+            val ec = Calendar.getInstance().apply { timeInMillis = it.date }
+            val sc = Calendar.getInstance().apply { timeInMillis = sel }
+            ec.get(Calendar.DAY_OF_YEAR) == sc.get(Calendar.DAY_OF_YEAR) &&
+            ec.get(Calendar.YEAR) == sc.get(Calendar.YEAR)
+        } ?: true
+
+        matchesSearch && matchesFilter && matchesMonth && matchesDate
+    }
+
+    val groupedExpenses = filteredExpenses
+        .let { if (sortDescending) it.sortedByDescending { e -> e.date } else it.sortedBy { e -> e.date } }
+        .groupBy { 
+            Calendar.getInstance().apply { 
+                timeInMillis = it.date
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+        }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState()
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    selectedDateMillis = datePickerState.selectedDateMillis
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    selectedDateMillis = null
+                    showDatePicker = false
+                }) { Text("Clear") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
     }
 
     Scaffold(
@@ -124,6 +170,17 @@ fun ExpenseHistoryContent(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { sortDescending = !sortDescending }) {
+                        Icon(
+                            imageVector = if (sortDescending) Icons.Default.Sort else Icons.Default.LowPriority,
+                            contentDescription = "Toggle Sort Order"
+                        )
+                    }
+                    IconButton(onClick = { showDatePicker = true }) {
+                        Icon(Icons.Default.DateRange, contentDescription = "Select Date")
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -151,7 +208,7 @@ fun ExpenseHistoryContent(
                 )
             )
 
-            // Month Selector & Year Display
+            // Month Selector & Date Chip
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -159,49 +216,59 @@ fun ExpenseHistoryContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Box(modifier = Modifier.weight(1f)) {
-                    Surface(
-                        onClick = { expanded = true },
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                if (selectedDateMillis == null) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        Surface(
+                            onClick = { expanded = true },
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                         ) {
-                            Text(
-                                text = months[selectedMonth],
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Icon(
-                                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                        modifier = Modifier.fillMaxWidth(0.6f).background(MaterialTheme.colorScheme.surface)
-                    ) {
-                        months.forEachIndexed { index, month ->
-                            DropdownMenuItem(
-                                text = { Text(month) },
-                                onClick = {
-                                    selectedMonth = index
-                                    expanded = false
-                                },
-                                colors = MenuDefaults.itemColors(
-                                    textColor = if (selectedMonth == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = months[selectedMonth],
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
-                            )
+                                Icon(
+                                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = Modifier.fillMaxWidth(0.6f).background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            months.forEachIndexed { index, month ->
+                                DropdownMenuItem(
+                                    text = { Text(month) },
+                                    onClick = {
+                                        selectedMonth = index
+                                        expanded = false
+                                    },
+                                    colors = MenuDefaults.itemColors(
+                                        textColor = if (selectedMonth == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
+                            }
                         }
                     }
+                } else {
+                    InputChip(
+                        selected = true,
+                        onClick = { selectedDateMillis = null },
+                        label = { Text(dayFormatter.format(Date(selectedDateMillis!!))) },
+                        trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Clear date", modifier = Modifier.size(18.dp)) },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
                 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -257,28 +324,108 @@ fun ExpenseHistoryContent(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (filteredExpenses.isEmpty()) {
+                if (groupedExpenses.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier.fillMaxWidth().padding(top = 60.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("No transactions for this month", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                if (selectedDateMillis != null) "No transactions for this date" else "No transactions for this month",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 } else {
-                    items(filteredExpenses) { expense ->
-                        TransactionListItem(
-                            expense = expense,
-                            currencyFormatter = currencyFormatter,
-                            onEdit = { onExpenseClick(expense.id) },
-                            onDelete = { onDeleteExpense(expense.id) }
-                        )
+                    groupedExpenses.forEach { (dateMillis, dayExpenses) ->
+                        val isExpanded = expandedDates[dateMillis] ?: true
+                        item {
+                            DateHeader(
+                                dateMillis = dateMillis,
+                                expenses = dayExpenses,
+                                currencyFormatter = currencyFormatter,
+                                isExpanded = isExpanded,
+                                onToggle = { expandedDates[dateMillis] = !isExpanded }
+                            )
+                        }
+                        if (isExpanded) {
+                            items(dayExpenses, key = { it.id }) { expense ->
+                                TransactionListItem(
+                                    expense = expense,
+                                    currencyFormatter = currencyFormatter,
+                                    onEdit = { onExpenseClick(expense.id) },
+                                    onDelete = { onDeleteExpense(expense.id) }
+                                )
+                            }
+                        }
                     }
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
             }
         }
+    }
+}
+
+@Composable
+fun DateHeader(
+    dateMillis: Long,
+    expenses: List<Expense>,
+    currencyFormatter: NumberFormat,
+    isExpanded: Boolean,
+    onToggle: () -> Unit
+) {
+    val dayFormatter = remember { java.text.SimpleDateFormat("EEEE, dd MMM yyyy", Locale.getDefault()) }
+    val totalIncome = expenses.filter { it.type == "Income" }.sumOf { it.amount }
+    val totalExpense = expenses.filter { it.type == "Expense" || it.type == "" }.sumOf { it.amount }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle() }
+            .padding(top = 12.dp, bottom = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = dayFormatter.format(Date(dateMillis)),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (totalIncome > 0) {
+                    Text(
+                        text = "+${currencyFormatter.format(totalIncome)}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFF4CAF50)
+                    )
+                }
+                if (totalExpense > 0) {
+                    Text(
+                        text = "-${currencyFormatter.format(totalExpense)}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFFCC0033)
+                    )
+                }
+            }
+        }
+        HorizontalDivider(
+            modifier = Modifier.padding(top = 8.dp),
+            thickness = 1.dp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+        )
     }
 }
 
