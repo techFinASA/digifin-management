@@ -45,7 +45,7 @@ fun SplashScreen(navController: NavController) {
             Image(
                 painter = painterResource(id = R.drawable.digifin_logo),
                 contentDescription = "Digifin Logo",
-                modifier = Modifier.size(width = 150.dp, height = 150.dp),
+                modifier = Modifier.size(width = 450.dp, height = 450.dp),
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
